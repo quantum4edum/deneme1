@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bohr Atom Modeli Simülasyonu</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Bohr Atom Modeli Simülasyonu</h1>
+  <div id="controls">
+    <label for="nSelect">Enerji Seviyesi (n):</label>
+    <select id="nSelect">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+    <label for="tempSlider">Sıcaklık (K):</label>
+    <input type="range" id="tempSlider" min="0" max="5000" value="300">
+    <span id="tempValue">300K</span>
+  </div>
+  <canvas id="simCanvas"></canvas>
+  <div id="info">
+    <p>Seviye: <span id="levelInfo"></span></p>
+    <p>Enerji: <span id="energyInfo"></span></p>
+    <p>Enerji Farkı: <span id="deltaEInfo"></span></p>
+    <p>Foton Dalga Boyu: <span id="lambdaInfo"></span></p>
+  </div>
+  <div id="explanations">
+    <h2>Bohr Modeli Nedir?</h2>
+    <p>Bohr modeli, elektronlarin belirli enerji seviyelerinde dairesel yörüngelerde dolandigini söyler.</p>
+    <p>Elektronlar yalnızca belirli enerji değerlerini alabilir; bu değerlere kuantum enerji seviyeleri denir.</p>
+    <h2>Elektron Enerji Seviyeleri</h2>
+    <p>n arttıkça elektron çekirdekten uzaklaşır ve enerjisi artar.</p>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
