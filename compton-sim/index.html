@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compton Saçılması Simülasyonu</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; }
+  canvas { background: #f8f8f8; width: 100%; height: auto; max-width: 600px; }
+  .controls { margin-top: 10px; }
+  label { display: block; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h2>Compton Saçılması (MEB K12 Uyumlu)</h2>
+<canvas id="simCanvas" width="600" height="400"></canvas>
+<div class="controls">
+  <label>Saçılma Açısı: <span id="angleValue">45</span>°
+    <input type="range" id="angle" min="0" max="180" value="45">
+  </label>
+  <label>Fotonun Başlangıç Dalga Boyu (nm): <span id="lambdaValue">0.1</span>
+    <input type="range" id="lambda" min="0.05" max="0.5" step="0.01" value="0.1">
+  </label>
+  <p>Saçılma Sonrası Dalga Boyu: <span id="result">0</span> nm</p>
+  <p style="font-size:0.9em">
+    <span style="color:blue">Mavi</span> gelen foton,
+    <span style="color:green">yeşil</span> saçılan foton,
+    <span style="color:orange">turuncu</span> elektron hareketini gösterir.
+  </p>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
