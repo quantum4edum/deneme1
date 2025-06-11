@@ -14,25 +14,43 @@ function computeScatteredLambda(lambda0, angle) {
   return lambda0 + LAMBDA_C * (1 - Math.cos(radians));
 }
 
+function drawArrow(fromX, fromY, toX, toY, color) {
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(fromX, fromY);
+  ctx.lineTo(toX, toY);
+  ctx.stroke();
+
+  const headLen = 10;
+  const angle = Math.atan2(toY - fromY, toX - fromX);
+  ctx.beginPath();
+  ctx.moveTo(toX, toY);
+  ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6),
+              toY - headLen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6),
+              toY - headLen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+}
+
 function drawSimulation() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Başlangıç fotonu
-  ctx.strokeStyle = 'blue';
-  ctx.lineWidth = 3;
+  const centerY = canvas.height / 2;
+
+  // Başlangıç fotonu oku ve foton
+  drawArrow(50, centerY, 300, centerY, 'blue');
   ctx.beginPath();
-  ctx.moveTo(50, canvas.height / 2);
-  ctx.lineTo(250, canvas.height / 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(250, canvas.height / 2, 5, 0, 2 * Math.PI);
+  ctx.arc(50, centerY, 5, 0, 2 * Math.PI);
   ctx.fillStyle = 'blue';
   ctx.fill();
 
   // Elektron
   ctx.fillStyle = 'red';
   ctx.beginPath();
-  ctx.arc(300, canvas.height / 2, 10, 0, 2 * Math.PI);
+  ctx.arc(300, centerY, 10, 0, 2 * Math.PI);
   ctx.fill();
 
   const angle = parseFloat(angleInput.value);
@@ -46,28 +64,18 @@ function drawSimulation() {
   const length = 150;
   const rad = angle * Math.PI / 180;
   const startX = 300;
-  const startY = canvas.height / 2;
+  const startY = centerY;
   const endX = startX + length * Math.cos(rad);
   const endY = startY - length * Math.sin(rad);
 
-  ctx.strokeStyle = 'green';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.lineTo(endX, endY);
-  ctx.stroke();
-
+  drawArrow(startX, startY, endX, endY, 'green');
   ctx.beginPath();
   ctx.arc(endX, endY, 5, 0, 2 * Math.PI);
   ctx.fillStyle = 'green';
   ctx.fill();
 
   // Saçılan elektron (basitleştirilmiş yön)
-  ctx.strokeStyle = 'orange';
-  ctx.beginPath();
-  ctx.moveTo(startX, startY);
-  ctx.lineTo(startX - length * 0.4, startY + length * Math.sin(rad) * 0.4);
-  ctx.stroke();
+  drawArrow(startX, startY, startX - length * 0.4, startY + length * Math.sin(rad) * 0.4, 'orange');
 }
 
 angleInput.addEventListener('input', drawSimulation);
