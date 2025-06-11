@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bohr Atom Modeli - K12 Simülasyonu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #111827; }
+    canvas { background: radial-gradient(circle, #1f2937 0%, #111827 100%); border-radius: 0.5rem; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: #3b82f6; cursor: pointer; border-radius: 9999px; margin-top: -6px; transition: background-color 0.2s; }
+    input[type=range]::-webkit-slider-thumb:hover { background: #60a5fa; }
+    input[type=range]::-moz-range-thumb { width: 20px; height: 20px; background: #3b82f6; cursor: pointer; border-radius: 9999px; }
+  </style>
+</head>
+<body class="text-gray-200">
+  <div class="container mx-auto p-4 max-w-5xl flex flex-col items-center">
+    <div class="w-full text-center mb-6">
+      <h1 class="text-3xl md:text-4xl font-bold text-white">Atomun Enerji Macerası</h1>
+      <p class="text-gray-400 mt-2">Bir elektronun yörüngeler arası yolculuğunu ve renkli fotonları keşfet!</p>
+    </div>
+    <div class="w-full mb-4">
+      <canvas id="simCanvas" class="w-full h-auto aspect-[4/3] max-h-[60vh]"></canvas>
+    </div>
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700">
+      <div class="flex flex-col space-y-6">
+        <h2 class="text-xl font-semibold text-white border-b border-gray-600 pb-2">Denetim Masası</h2>
+        <div>
+          <label for="nSelect" class="block mb-2 text-sm font-medium text-gray-300">Elektronu hangi yörüngeye gönderelim?</label>
+          <select id="nSelect" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+            <option value="1">1. Yörünge</option>
+            <option value="2">2. Yörünge</option>
+            <option value="3">3. Yörünge</option>
+            <option value="4">4. Yörünge</option>
+            <option value="5">Elektronu Kopar</option>
+          </select>
+        </div>
+        <div>
+          <label for="tempSlider" class="block mb-2 text-sm font-medium text-gray-300">Atomu ne kadar ısıtalım?</label>
+          <div class="flex items-center space-x-4">
+            <input id="tempSlider" type="range" min="0" max="10000" value="300" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <span id="tempValue" class="text-sm font-mono p-2 bg-gray-900 rounded-md w-20 text-center">300 K</span>
+          </div>
+        </div>
+        <button id="resetButton" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Simülasyonu Sıfırla</button>
+      </div>
+      <div class="flex flex-col space-y-3">
+        <h2 class="text-xl font-semibold text-white border-b border-gray-600 pb-2">Anlık Bilgiler</h2>
+        <div class="flex justify-between font-mono text-sm"><span class="text-gray-400">Elektronun Yeri:</span><span id="levelInfo" class="font-bold text-white">-</span></div>
+        <div class="flex justify-between font-mono text-sm"><span class="text-gray-400">Elektronun Enerjisi:</span><span id="energyInfo" class="font-bold text-white">-</span></div>
+        <div class="flex justify-between font-mono text-sm"><span class="text-gray-400">Gelen/Giden Enerji:</span><span id="deltaEInfo" class="font-bold text-green-400">-</span></div>
+        <div class="flex justify-between font-mono text-sm"><span class="text-gray-400">Foton Dalga Boyu:</span><span id="lambdaInfo" class="font-bold text-blue-400">-</span></div>
+        <div class="flex justify-between font-mono text-sm items-center"><span class="text-gray-400">Fotonun Rengi:</span><span id="photonColor" class="w-5 h-5 rounded-full bg-transparent border border-gray-600 transition-all"></span></div>
+        <div class="flex justify-between font-mono text-sm"><span class="text-gray-400">Durum:</span><span id="statusInfo" class="font-bold text-white">-</span></div>
+      </div>
+    </div>
+    <div class="w-full max-w-4xl mt-6 text-left p-6 bg-gray-800/50 backdrop-blur-sm rounded-lg border border-gray-700">
+      <h2 class="text-xl font-semibold text-white mb-3">Simülasyon Hakkında</h2>
+      <p class="text-gray-400 text-sm leading-relaxed">
+        Atomları birer Güneş Sistemi gibi hayal edebiliriz. Çekirdeğin çevresinde sadece belirli yörüngelerde bulunabilen elektronlar vardır. Elektron yeterli enerji alırsa daha yüksek bir yörüngeye çıkar, enerjisini kaybettiğinde alt yörüngelere iner. Çok yüksek enerji aldığında ise atomdan tamamen kopabilir. Bu simülasyon ile bu süreci adım adım gözlemleyebilirsiniz.
+      </p>
+    </div>
+  </div>
+  <script type="module">
+    class Photon {
+      constructor(deltaE) {
+        this.deltaE = deltaE;
+        const hc = 1240;
+        this.lambda = Math.abs(hc / deltaE);
+        this.color = this.getColorForWavelength(this.lambda);
+        this.isAbsorption = deltaE > 0;
+      }
+      getColorForWavelength(wl) {
+        if (wl > 635) return "hsl(0, 100%, 65%)";
+        if (wl > 590) return "hsl(39, 100%, 60%)";
+        if (wl > 560) return "hsl(60, 100%, 60%)";
+        if (wl > 520) return "hsl(120, 100%, 60%)";
+        if (wl > 490) return "hsl(180, 100%, 60%)";
+        if (wl > 450) return "hsl(240, 100%, 65%)";
+        return "hsl(270, 100%, 70%)";
+      }
+    }
+    class Electron {
+      constructor(n = 1) {
+        this.n = n;
+        this.trail = [];
+      }
+      radius(scaleFactor) { return scaleFactor * this.n * this.n; }
+      energy() { return -13.6 / (this.n * this.n); }
+    }
+    class AtomSimulation {
+      constructor(canvas, callbacks = {}) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.callbacks = callbacks;
+        this.electron = new Electron(1);
+        this.lastUpdate = null;
+        this.electronAngle = Math.random() * Math.PI * 2;
+        this.animationTime = 1000;
+        this.animating = false;
+        this.photon = null;
+        this.ionized = false;
+        this.reset();
+      }
+      reset() {
+        this.n = 1;
+        this.targetN = 1;
+        this.electron.n = 1;
+        this.energy = this.electron.energy();
+        this.temperature = 300;
+        this.animating = false;
+        this.photon = null;
+        this.electron.trail = [];
+        this.ionized = false;
+        if (this.callbacks.onReset) this.callbacks.onReset(this.temperature);
+      }
+      start() { this.resize(); requestAnimationFrame(time => this.loop(time)); }
+      resize() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = this.canvas.getBoundingClientRect();
+        this.width = rect.width; this.height = rect.height;
+        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
+        this.ctx.scale(dpr, dpr);
+        this.center = { x: this.width / 2, y: this.height / 2 };
+        this.orbitScaleFactor = Math.min(this.width, this.height) / 30;
+      }
+      loop(time) {
+        if (!this.lastUpdate) this.lastUpdate = time;
+        const dt = time - this.lastUpdate;
+        this.update(dt, time); this.draw(time);
+        this.lastUpdate = time; requestAnimationFrame(t => this.loop(t));
+      }
+      update(dt, time) {
+        if (this.ionized) return;
+        if (this.animating) {
+          this.animationElapsed += dt;
+          if (this.animationElapsed >= this.animationTime) {
+            this.animating = false;
+            this.electron.n = this.targetN;
+            this.n = this.electron.n;
+            this.energy = this.electron.energy();
+            if (this.n >= 5) { this.ionized = true; }
+            this.photon = null;
+          }
+        } else {
+          if (Math.random() < this.temperature * (1 / 150000) * (dt/16)) {
+            const next = Math.min(5, this.n + 1);
+            if (next !== this.n) this.setLevel(next);
+          } else if (this.n > 1) {
+            const decayChance = (0.8 / (this.n * this.n)) * (dt / 1000);
+            if (Math.random() < decayChance) {
+              const lowerN = Math.floor(Math.random() * (this.n - 1)) + 1;
+              this.setLevel(lowerN);
+            }
+          }
+        }
+        this.electronAngle += dt * 0.0004 / this.n;
+        if (this.callbacks.onUpdate) {
+          this.callbacks.onUpdate({ n: this.n, energy: this.energy, photon: this.photon, ionized: this.ionized });
+        }
+      }
+      energyForLevel(n) { return -13.6 / (n * n); }
+      setTemperature(temp) { this.temperature = temp; }
+      setLevel(n) {
+        if (n === this.n || this.animating) return;
+        this.targetN = n;
+        if (n >= 5) { this.photon = new Photon(this.energyForLevel(n) - this.energyForLevel(this.n)); }
+        else { this.photon = new Photon(this.energyForLevel(n) - this.energyForLevel(this.n)); }
+        this.animating = true; this.animationElapsed = 0;
+      }
+      draw(time) {
+        const ctx = this.ctx; ctx.clearRect(0, 0, this.width, this.height);
+        const nucleusPulse = 1 + Math.sin(time / 500) * 0.1;
+        const nucleusSize = Math.min(this.width, this.height) / 60;
+        ctx.fillStyle = '#fca5a5'; ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 20;
+        ctx.beginPath(); ctx.arc(this.center.x, this.center.y, nucleusSize * nucleusPulse, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        for (let i = 1; i <= 4; i++) {
+          ctx.strokeStyle = `rgba(107, 114, 128, ${this.n === i ? 0.8 : 0.3})`;
+          ctx.lineWidth = this.n === i ? 2.5 : 1; ctx.setLineDash(this.n === i ? [] : [4, 6]);
+          ctx.beginPath(); ctx.arc(this.center.x, this.center.y, new Electron(i).radius(this.orbitScaleFactor), 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        if (this.ionized) return;
+        const progress = this.animating ? Math.min(this.animationElapsed / this.animationTime, 1) : 1.0;
+        const easedProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+        const startRadius = new Electron(this.n).radius(this.orbitScaleFactor);
+        const endRadius = new Electron(this.targetN).radius(this.orbitScaleFactor);
+        const radius = startRadius + (endRadius - startRadius) * easedProgress;
+        const x = this.center.x + radius * Math.cos(this.electronAngle);
+        const y = this.center.y + radius * Math.sin(this.electronAngle);
+        this.electron.trail.push({x, y, alpha: 1.0});
+        if (this.electron.trail.length > 20) this.electron.trail.shift();
+        this.electron.trail.forEach((p, index) => {
+          p.alpha *= 0.85; ctx.beginPath(); ctx.fillStyle = `rgba(96, 165, 250, ${p.alpha * 0.5})`;
+          ctx.arc(p.x, p.y, (index / 20) * 5, 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.fillStyle = '#93c5fd'; ctx.shadowColor = '#60a5fa'; ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        if (this.animating && this.photon) { this.drawPhoton(easedProgress, startRadius); }
+      }
+      drawPhoton(progress, currentRadius) {
+        const ctx = this.ctx; let p_x, p_y;
+        const glow = Math.sin(progress * Math.PI);
+        ctx.fillStyle = this.photon.color; ctx.shadowColor = this.photon.color; ctx.shadowBlur = 25 * glow;
+        if(this.photon.isAbsorption) {
+          const travelDist = this.width / 2; const startPos = travelDist; const endPos = currentRadius;
+          const currentPos = startPos + (endPos - startPos) * progress;
+          p_x = this.center.x + currentPos * Math.cos(this.electronAngle + Math.PI);
+          p_y = this.center.y + currentPos * Math.sin(this.electronAngle + Math.PI);
+        } else {
+          const travelDist = this.width / 2; const currentPos = currentRadius + travelDist * progress;
+          p_x = this.center.x + currentPos * Math.cos(this.electronAngle);
+          p_y = this.center.y + currentPos * Math.sin(this.electronAngle);
+        }
+        ctx.globalAlpha = glow; ctx.beginPath(); ctx.arc(p_x, p_y, 5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+      }
+    }
+    const canvas = document.getElementById('simCanvas');
+    const nSelect = document.getElementById('nSelect');
+    const tempSlider = document.getElementById('tempSlider');
+    const tempValue = document.getElementById('tempValue');
+    const resetButton = document.getElementById('resetButton');
+    const levelInfo = document.getElementById('levelInfo');
+    const energyInfo = document.getElementById('energyInfo');
+    const deltaEInfo = document.getElementById('deltaEInfo');
+    const lambdaInfo = document.getElementById('lambdaInfo');
+    const photonColorSpan = document.getElementById('photonColor');
+    const statusInfo = document.getElementById('statusInfo');
+    const sim = new AtomSimulation(canvas, {
+      onUpdate(info) {
+        if (info.ionized) {
+          statusInfo.textContent = 'Elektron koptu';
+          levelInfo.textContent = '-';
+          energyInfo.textContent = '-';
+          deltaEInfo.textContent = '-';
+          lambdaInfo.textContent = '-';
+          photonColorSpan.style.backgroundColor = 'transparent';
+          photonColorSpan.style.borderColor = '#4b5563';
+          return;
+        }
+        statusInfo.textContent = 'Atom dengede';
+        levelInfo.textContent = `${info.n}. Yörünge`;
+        energyInfo.textContent = `${info.energy.toFixed(2)} eV`;
+        if (info.photon) {
+          deltaEInfo.textContent = `${info.photon.deltaE.toFixed(2)} eV`;
+          deltaEInfo.className = info.photon.deltaE > 0 ? 'font-bold text-green-400' : 'font-bold text-blue-400';
+          lambdaInfo.textContent = `${info.photon.lambda.toFixed(0)} nm`;
+          photonColorSpan.style.backgroundColor = info.photon.color;
+          photonColorSpan.style.borderColor = info.photon.color;
+        } else {
+          deltaEInfo.textContent = '-'; lambdaInfo.textContent = '-';
+          photonColorSpan.style.backgroundColor = 'transparent';
+          photonColorSpan.style.borderColor = '#4b5563';
+        }
+      },
+      onReset(temp){
+        tempSlider.value = temp; tempValue.textContent = `${temp} K`; nSelect.value = 1; statusInfo.textContent = '-';
+      }
+    });
+    nSelect.addEventListener('change', () => {
+      sim.setLevel(parseInt(nSelect.value, 10));
+    });
+    tempSlider.addEventListener('input', () => {
+      const temp = parseInt(tempSlider.value, 10); tempValue.textContent = `${temp} K`; sim.setTemperature(temp);
+    });
+    resetButton.addEventListener('click', () => { sim.reset(); });
+    window.addEventListener('resize', () => sim.resize());
+    sim.start();
+  </script>
+</body>
+</html>
