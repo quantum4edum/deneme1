@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geliştirilmiş Compton Saçılması</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        #simCanvas { cursor: default; background-color: #020617; }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; background: #6366f1;
+            cursor: pointer; height: 1.25rem; width: 1.25rem;
+            border-radius: 9999px; margin-top: -6px; border: 2px solid white;
+            transition: background-color 150ms ease-in-out;
+        }
+        .slider-thumb:hover::-webkit-slider-thumb { background: #818cf8; }
+    </style>
+</head>
+<body class="text-gray-300 flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+
+<main class="w-full max-w-7xl">
+    <header class="text-center mb-4">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-white">Compton Saçılması Deneyi (MEB)</h1>
+        <p class="text-gray-400 mt-1 text-sm sm:text-base">Foton enerjisine bağlı olarak gelme açısı otomatik ayarlanır.</p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-slate-900/50 border border-indigo-500/20 rounded-xl shadow-2xl shadow-indigo-500/10 p-2">
+            <canvas id="simCanvas" width="900" height="600" class="w-full h-auto rounded-lg"></canvas>
+        </div>
+        <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col space-y-5">
+            <div>
+                <h2 class="text-xl font-bold text-white mb-3">Değişkenler</h2>
+                <div class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                        <div>
+                            <label for="energy-slider" class="text-sm font-medium block mb-2">Gelen Foton Enerjisi</label>
+                            <input type="range" id="energy-slider" min="0.005" max="0.05" step="0.0001" value="0.0124" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+                            <div class="text-xs font-semibold text-slate-400 flex justify-between mt-1">
+                                <span>Yüksek</span><span>Düşük</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="angle-slider" class="text-sm font-medium block mb-2">Saçılma Açısı (θ)</label>
+                            <input type="range" id="angle-slider" min="0" max="180" step="1" value="45" class="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+                            <div class="text-xs font-semibold text-slate-400 flex justify-between mt-1">
+                                <span>0°</span><span>180°</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-x-6 gap-y-5">
+                        <div>
+                            <label for="inc-angle" class="text-sm font-medium block mb-2">Gelme Açısı (otomatik)</label>
+                            <input type="text" id="inc-angle" class="w-full bg-slate-700 rounded-lg p-2 text-center" readonly>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button id="startBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-500 text-white font-bold py-2.5 px-4 rounded-lg transition-colors">Başlat</button>
+                        <button id="resetBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg transition-colors">Sıfırla</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-grow space-y-4 pt-4 border-t border-slate-700">
+                <h2 class="text-xl font-bold text-white mb-2">Sonuçlar</h2>
+                <div class="p-3 bg-slate-900/70 rounded-lg border border-sky-500/30">
+                    <h3 class="font-semibold text-lg text-sky-400">Gelen Foton (λ₀)</h3>
+                    <p class="text-sm">Dalga Boyu: <span id="val-i-lambda" class="font-mono text-white">...</span></p>
+                    <p class="text-sm">Enerji: <span id="val-i-energy" class="font-mono text-white">...</span></p>
+                </div>
+                <div class="p-3 bg-slate-900/70 rounded-lg border border-emerald-500/30">
+                    <h3 class="font-semibold text-lg text-emerald-400">Saçılan Foton (λ')</h3>
+                    <p class="text-sm">Dalga Boyu: <span id="val-s-lambda" class="font-mono text-white">...</span></p>
+                    <p class="text-sm">Enerji: <span id="val-s-energy" class="font-mono text-white">...</span></p>
+                </div>
+                <div class="p-3 bg-slate-900/70 rounded-lg border border-orange-500/30">
+                    <h3 class="font-semibold text-lg text-orange-400">Elektron (e⁻)</h3>
+                    <p class="text-sm">Kazandığı Enerji: <span id="val-e-ke" class="font-mono text-white">...</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+class PhysicsCalculator {
+    static CONSTANTS = {
+        HC: 1.24,
+        LAMBDA_C: 0.002426,
+        ELECTRON_MASS_ENERGY: 511
+    };
+
+    calculate(initialLambdaStr, scatterAngleStr) {
+        const initialLambda = parseFloat(initialLambdaStr);
+        const scatterAngle = parseFloat(scatterAngleStr);
+        const { HC, LAMBDA_C, ELECTRON_MASS_ENERGY } = PhysicsCalculator.CONSTANTS;
+        const scatterAngleRad = scatterAngle * Math.PI / 180;
+        const initialEnergy = HC / initialLambda;
+        const finalLambda = initialLambda + LAMBDA_C * (1 - Math.cos(scatterAngleRad));
+        const finalEnergy = HC / finalLambda;
+        const electronKE = initialEnergy - finalEnergy;
+        const pPhotonInitial = initialEnergy;
+        const pPhotonFinal = finalEnergy;
+        const pElectronFinal = Math.sqrt(electronKE * (electronKE + 2 * ELECTRON_MASS_ENERGY));
+        const electronAngleRad = Math.atan2(pPhotonFinal * Math.sin(scatterAngleRad), pPhotonInitial - pPhotonFinal * Math.cos(scatterAngleRad));
+        return { initialLambda, initialEnergy, scatterAngleRad, finalLambda, finalEnergy, electronKE, electronAngleRad };
+    }
+}
+
+class Renderer {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.centerX = canvas.width / 2;
+        this.centerY = canvas.height / 2;
+    }
+
+    clear() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); }
+
+    getEnergyColor(lambda) {
+        const frac = (lambda - 0.005) / (0.05 - 0.005);
+        return `hsl(${270 - frac * 240}, 95%, 65%)`;
+    }
+
+    draw(state, phys, now) {
+        this.drawWavePacket(state.photon.x, state.photon.y, state.photon.alpha, state.incidentAngleRad, 80, this.getEnergyColor(phys.initialLambda), phys.initialLambda);
+        this.drawParticle(state.electron.x, state.electron.y, 8, 'white', state.electron.alpha, now / 200);
+        this.drawWavePacket(state.scatteredPhoton.x, state.scatteredPhoton.y, state.scatteredPhoton.alpha, state.incidentAngleRad - phys.scatterAngleRad, 80, this.getEnergyColor(phys.finalLambda), phys.finalLambda);
+        this.drawParticle(state.scatteredElectron.x, state.scatteredElectron.y, 8, '#f97316', state.scatteredElectron.alpha, 0);
+    }
+
+    drawWavePacket(x, y, alpha, angle, length, color) {
+        if (alpha <= 0) return;
+        this.ctx.save();
+        this.ctx.globalAlpha = alpha;
+        this.ctx.translate(x, y);
+        this.ctx.rotate(angle);
+        const freq = 1 / 0.01;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, 0);
+        for (let i = 0; i <= length; i++) {
+            const envelope = Math.sin(Math.PI * (i / length)) * 12;
+            const wave = Math.sin(i * freq * 0.15) * envelope;
+            this.ctx.lineTo(i, wave);
+        }
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowColor = color;
+        this.ctx.shadowBlur = 10;
+        this.ctx.stroke();
+        this.ctx.restore();
+    }
+
+    drawParticle(x, y, r, color, alpha, pulseT) {
+        if (alpha <= 0) return;
+        this.ctx.save();
+        this.ctx.globalAlpha = alpha;
+        const pulse = pulseT ? 15 + Math.sin(pulseT) * 5 : 15;
+        this.ctx.shadowColor = color;
+        this.ctx.shadowBlur = pulse;
+        this.ctx.fillStyle = color;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, r, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.restore();
+    }
+}
+
+class Animator {
+    constructor() { this.tweens = []; }
+    easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+    add(target, prop, end, dur, done = () => {}) {
+        const start = target[prop];
+        const sTime = performance.now();
+        const t = {
+            update: (now) => {
+                const p = Math.min((now - sTime) / dur, 1);
+                target[prop] = start + (end - start) * this.easeOut(p);
+                if (p >= 1) { t.isDone = true; done(); }
+            },
+            isDone: false
+        };
+        this.tweens.push(t);
+    }
+    update() {
+        const now = performance.now();
+        for (let i = this.tweens.length - 1; i >= 0; i--) {
+            const tw = this.tweens[i];
+            tw.update(now);
+            if (tw.isDone) this.tweens.splice(i, 1);
+        }
+    }
+    clear() { this.tweens.length = 0; }
+}
+
+class ComptonSimulation {
+    constructor() {
+        this.canvas = document.getElementById('simCanvas');
+        this.renderer = new Renderer(this.canvas);
+        this.physics = new PhysicsCalculator();
+        this.animator = new Animator();
+        this.ui = {
+            energy: document.getElementById('energy-slider'),
+            angle: document.getElementById('angle-slider'),
+            incAngle: document.getElementById('inc-angle'),
+            startBtn: document.getElementById('startBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            out: {
+                iLambda: document.getElementById('val-i-lambda'),
+                iEnergy: document.getElementById('val-i-energy'),
+                sLambda: document.getElementById('val-s-lambda'),
+                sEnergy: document.getElementById('val-s-energy'),
+                eKE: document.getElementById('val-e-ke')
+            }
+        };
+        this.resetState(true);
+        this.setupListeners();
+        this.render(performance.now());
+    }
+
+    energyToIncAngle(E) {
+        const min = parseFloat(this.ui.energy.min);
+        const max = parseFloat(this.ui.energy.max);
+        const f = (E - min) / (max - min);
+        return (Math.PI / 3) * (1 - f); // between 60 and 0 degrees
+    }
+
+    resetState(full = true) {
+        this.animator.clear();
+        const angleRad = this.energyToIncAngle(parseFloat(this.ui.energy.value));
+        this.state = {
+            photon: { x: this.renderer.centerX - 250 * Math.cos(angleRad), y: this.renderer.centerY + 250 * Math.sin(angleRad), alpha: 1 },
+            electron: { x: this.renderer.centerX, y: this.renderer.centerY, alpha: 1 },
+            scatteredPhoton: { x: this.renderer.centerX, y: this.renderer.centerY, alpha: 0 },
+            scatteredElectron: { x: this.renderer.centerX, y: this.renderer.centerY, alpha: 0 },
+            incidentAngleRad: angleRad
+        };
+        if (full) {
+            this.ui.startBtn.disabled = false;
+            this.ui.resetBtn.disabled = true;
+            this.ui.energy.disabled = false;
+            this.ui.angle.disabled = false;
+            const phys = this.physics.calculate(this.ui.energy.value, this.ui.angle.value);
+            this.updateUI(phys, false);
+            this.ui.incAngle.value = `${(angleRad * 180 / Math.PI).toFixed(1)}°`;
+        }
+    }
+
+    setupListeners() {
+        this.ui.energy.addEventListener('input', () => {
+            if (this.state.animating) return;
+            const angleRad = this.energyToIncAngle(parseFloat(this.ui.energy.value));
+            this.state.incidentAngleRad = angleRad;
+            this.state.photon.x = this.renderer.centerX - 250 * Math.cos(angleRad);
+            this.state.photon.y = this.renderer.centerY + 250 * Math.sin(angleRad);
+            this.ui.incAngle.value = `${(angleRad * 180 / Math.PI).toFixed(1)}°`;
+            const phys = this.physics.calculate(this.ui.energy.value, this.ui.angle.value);
+            this.updateUI(phys, false);
+        });
+        this.ui.angle.addEventListener('input', () => {
+            if (this.state.animating) return;
+            const phys = this.physics.calculate(this.ui.energy.value, this.ui.angle.value);
+            this.updateUI(phys, false);
+        });
+        this.ui.startBtn.addEventListener('click', () => this.start());
+        this.ui.resetBtn.addEventListener('click', () => this.resetState(true));
+    }
+
+    updateUI(phys, show) {
+        this.ui.out.iLambda.textContent = `${phys.initialLambda.toFixed(4)} nm`;
+        this.ui.out.iEnergy.textContent = `${phys.initialEnergy.toFixed(2)} keV`;
+        this.ui.out.sLambda.textContent = show ? `${phys.finalLambda.toFixed(4)} nm` : '...';
+        this.ui.out.sEnergy.textContent = show ? `${phys.finalEnergy.toFixed(2)} keV` : '...';
+        this.ui.out.eKE.textContent = show ? `${phys.electronKE.toFixed(2)} keV` : '...';
+    }
+
+    start() {
+        if (this.state.animating) return;
+        this.state.animating = true;
+        this.ui.startBtn.disabled = true;
+        this.ui.resetBtn.disabled = false;
+        this.ui.energy.disabled = true;
+        this.ui.angle.disabled = true;
+        const phys = this.physics.calculate(this.ui.energy.value, this.ui.angle.value);
+        const travelTime = 2000;
+        const scatterTime = 2500;
+        this.animator.add(this.state.photon, 'x', this.renderer.centerX, travelTime);
+        this.animator.add(this.state.photon, 'y', this.renderer.centerY, travelTime, () => {
+            this.updateUI(phys, true);
+            this.state.photon.alpha = 0;
+            this.state.scatteredPhoton.alpha = 1;
+            this.state.scatteredElectron.alpha = 1;
+            const endPhotonX = this.renderer.centerX + 180 * Math.cos(this.state.incidentAngleRad - phys.scatterAngleRad);
+            const endPhotonY = this.renderer.centerY + 180 * Math.sin(this.state.incidentAngleRad - phys.scatterAngleRad);
+            const endElectronX = this.renderer.centerX + 120 * Math.cos(this.state.incidentAngleRad + phys.electronAngleRad);
+            const endElectronY = this.renderer.centerY + 120 * Math.sin(this.state.incidentAngleRad + phys.electronAngleRad);
+            this.animator.add(this.state.scatteredPhoton, 'x', endPhotonX, scatterTime);
+            this.animator.add(this.state.scatteredPhoton, 'y', endPhotonY, scatterTime);
+            this.animator.add(this.state.scatteredElectron, 'x', endElectronX, scatterTime);
+            this.animator.add(this.state.scatteredElectron, 'y', endElectronY, scatterTime, () => {
+                this.state.animating = false;
+                this.ui.resetBtn.disabled = false;
+            });
+        });
+    }
+
+    render(now) {
+        requestAnimationFrame(t => this.render(t));
+        this.animator.update();
+        const phys = this.physics.calculate(this.ui.energy.value, this.ui.angle.value);
+        this.renderer.clear();
+        this.renderer.draw(this.state, phys, now);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => new ComptonSimulation());
+</script>
+</body>
+</html>
