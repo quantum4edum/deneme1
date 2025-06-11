@@ -1,0 +1,8 @@
+{
+  "name": "compton-sim",
+  "version": "1.0.0",
+  "description": "Simple Compton scattering simulation for MEB K12 curriculum",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0"
+  }
+}

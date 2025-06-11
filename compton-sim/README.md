@@ -5,7 +5,7 @@ Bu basit simülasyon, MEB (K12) müfredatına uygun olarak Compton saçılmasın
 ## Kullanım
 
 1. `index.html` dosyasını modern bir tarayıcıda açın.
-2. "Saçılma Açısı" ve "Fototun Başlangıç Dalga Boyu" kaydırıcılarını kullanarak parametreleri değiştirin.
+2. "Saçılma Açısı" ve "Fotonun Başlangıç Dalga Boyu" kaydırıcılarını kullanarak parametreleri değiştirin.
 3. Ekrandaki grafik ve sonuç değeri anlık olarak güncellenir.
 
 Simülasyonda kullanılan formül:
